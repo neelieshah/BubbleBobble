@@ -1,0 +1,240 @@
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.Scanner;
+
+import javax.imageio.ImageIO;
+import javax.swing.Timer;
+
+public class Monster {
+	
+	protected Image monsterImg;
+	protected BufferedImage img_M = null;
+	protected final int MAX_TRAVEL_HEIGHT;
+	protected Point pos;
+	private Grid grid;
+	private ArrayList<String> moves;
+	Scanner scan;
+	int moveCounter = 0;
+	private BubbleBobbleComponent bubC;
+	private int type;
+	
+	
+	public Monster(Grid g, BubbleBobbleComponent bub, int type) {
+		monsterImg = Toolkit.getDefaultToolkit().getImage("monster"+type +".png");
+		try {
+			img_M = ImageIO.read(new File("monster"+type +".png"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		grid = g;
+		// find a way to get start pos for monster
+//		ArrayList<Tile> tempTiles = grid.getGroundTiles();
+//
+//		rand = new Random();
+//		Tile tempTileForStartPos = tempTiles.get(rand.nextInt(tempTiles.size()));
+		
+//		monsterPos = new Point(tempTileForStartPos.x, tempTileForStartPos.y - 100);	
+		if (type == 1)
+			pos = new Point(700,700);
+		else
+			pos = new Point (300,700);
+		MAX_TRAVEL_HEIGHT = 200;
+		moves = new ArrayList <String>();
+		this.type = type;
+
+		loadFile();
+		bubC = bub;
+
+	}
+	
+	private void loadFile() 
+	{
+
+		File file = new File("C:\\Users\\shahnv\\git\\ArcadeGame\\ArcadeGameGit\\monsterPattern"+type+".txt");
+		try {
+			scan = new Scanner(file);
+		} catch (FileNotFoundException e) {
+			System.out.println("file does not exist");
+		} 
+	
+		try {
+			while (scan.hasNextLine()) {
+				String direction = scan.nextLine();
+				moves.add(direction);
+
+			}
+		} catch (NullPointerException n) {
+			System.out.println("file null because file not found");
+		}
+		scan.close();
+	}
+
+	public void draw(Graphics2D g) {
+		g.drawImage(img_M, pos.x, pos.y, null);
+	}
+
+	public void readNextPos() 
+	{
+		if (moveCounter == moves.size())
+		{
+			moveCounter = 0;
+		}
+		String direction = moves.get(moveCounter);
+		
+		if (direction.equals("right"))
+		{
+			move(100,0, "right");
+		}
+		if (direction.equals("left"))
+		{
+			move(-100,0,"left");
+		}
+		if (direction.equals("bubble"))
+		{
+			int add = 100;
+			Bubble bub = new Bubble (pos.x+add, pos.y);
+			int maxX = pos.x+(4*add);
+			bubC.bM = bub;
+			
+			Timer advanceStateTimer = new Timer(10, new ActionListener() {
+
+				
+				public void actionPerformed(ActionEvent e) 
+				{
+					if (add == 100 && bub.pos.x < maxX)
+					{
+						bub.pos.x = bub.pos.x+10;
+						bubC.repaint();
+					}
+					else if (add == -100 && bub.pos.x > maxX)
+					{
+						bub.pos.x = bub.pos.x-10;
+						bubC.repaint();
+					}
+					
+					if (bub.pos.x == maxX)
+					{
+						bub.pos.x = 1000;
+						bub.pos.y = 1000;
+						bubC.repaint();
+						((Timer)e.getSource()).stop();
+					}
+				}
+				
+			});
+			
+			advanceStateTimer.start();
+		}
+
+		
+		if (direction.equals("jump"))
+		{
+			int jumpTo = jumpPosition();
+			
+			Timer advanceStateTimer = new Timer(1, new ActionListener() {
+
+				
+				public void actionPerformed(ActionEvent e) 
+				{
+					if (pos.y > jumpTo)
+					{
+						pos.y-=10;
+					}
+					
+					if (pos.y == jumpTo)
+					{
+						((Timer)e.getSource()).stop();
+					}
+				}
+				
+			});
+			advanceStateTimer.start();
+		}
+		moveCounter ++;
+	}
+
+	private void move(int dx, int dy, String dir) 
+	{
+		Tile temp = grid.getTileByLoc(pos.x + dx, pos.y + dy);
+		if (temp != null && temp.hasGround == false) {
+			if ((pos.x + dx <= 800) && (pos.x + dx >= 0)) {
+				if (grid.getTileByLoc(pos.x + dx, pos.y + dy).canJump == false) {
+					Tile t = findGroundTile(dir);
+					this.pos = new Point(t.x, t.y);
+				} else {
+					//while (pos.x < pos.x + dx) {
+						//pos.x += dx / 10;
+						this.pos = new Point(pos.x + dx, pos.y + dy);
+					//}
+				}
+			}
+
+		}		
+	}
+
+	private Tile findGroundTile(String dir) 
+	{
+		int num = 0;
+		if (dir.equals("right")) {
+			num = 100;
+		} else {
+			num = -100;
+		}
+		for (int i = pos.y / 100 ; i < 9; i++)
+		{
+			if (grid.tiles[(pos.x + num) / 100][i].canJump == true)
+			{
+				if (dir.equals("right")) {
+					return grid.tiles[(pos.x + num)/ 100][i];
+				}
+				else if (dir.equals("left")) {
+					return grid.tiles[(pos.x + num)/ 100][i];
+				}
+			}
+				
+		}
+		return null;
+	}
+
+	private int jumpPosition() 
+	{
+		int initial = pos.y;
+		int max =  initial -MAX_TRAVEL_HEIGHT-100;
+		int i = initial -200;
+		boolean hasntJumped = true;
+		while (i >= max && hasntJumped)
+		{
+			Tile t = grid.getTileByLoc(pos.x, i);
+			if (t != null && t.canJump) {
+				hasntJumped = false;
+				return jump(initial - i);
+
+			}
+			i -= 100;
+		}
+		
+		return initial;
+	}
+
+	private int jump(int i) 
+	{
+		return pos.y - i;
+
+	}
+
+	public void updateGrid(Grid newGrid) 
+	{
+		this.grid = newGrid;
+	}
+	
+}

@@ -1,0 +1,148 @@
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import javax.swing.Timer;
+
+public class Player {
+
+	protected Image image;
+	protected Point pos;
+	protected Grid grid;
+	protected final int MAX_TRAVEL_HEIGHT;
+	protected boolean facingRight;
+
+	
+	protected int level = 1;
+	
+	public Player() {
+		facingRight = true;
+		image = Toolkit.getDefaultToolkit().getImage(("bubbleBobble_Player.png"));
+		try {
+
+			image = ImageIO.read(new File("bubbleBobble_Player.png"));
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		pos = new Point(0, 700);
+		grid = new Grid(level);
+		MAX_TRAVEL_HEIGHT = 200;
+	
+	}
+
+	public void draw(Graphics2D g) 
+	{
+		updateImage();
+		g.drawImage(image, pos.x, pos.y, null);
+	}
+	
+	private void updateImage() 
+	{
+		if (facingRight)
+		{
+			image = Toolkit.getDefaultToolkit().getImage(("bubbleBobble_Player.png"));
+			try {
+
+				image = ImageIO.read(new File("bubbleBobble_Player.png"));
+
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		else
+		{
+			image = Toolkit.getDefaultToolkit().getImage(("bubbleBobble_Player_opposite.png"));
+			try {
+
+				image = ImageIO.read(new File("bubbleBobble_Player_opposite.png"));
+
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+	}
+
+	public void moveBy(int dx, int dy, String dir) {
+		Tile temp = grid.getTileByLoc(pos.x + dx, pos.y + dy);
+		if (temp != null && temp.hasGround == false) {
+			if ((pos.x + dx <= 800) && (pos.x + dx >= 0)) {
+				if (grid.getTileByLoc(pos.x + dx, pos.y + dy).canJump == false) {
+					Tile t = findGroundTile(dir);
+					this.pos = new Point(t.x, t.y);
+				} else {
+					//while (pos.x < pos.x + dx) {
+						//pos.x += dx / 10;
+						this.pos = new Point(pos.x + dx, pos.y + dy);
+					//}
+				}
+			}
+
+		}
+	}
+	
+	public Tile findGroundTile(String dir) {
+		int num = 0;
+		if (dir.equals("right")) {
+			num = 100;
+		} else {
+			num = -100;
+		}
+		for (int i = pos.y / 100 ; i < 9; i++)
+		{
+			if (grid.tiles[(pos.x + num) / 100][i].canJump == true)
+			{
+				if (dir.equals("right")) {
+					return grid.tiles[(pos.x + num)/ 100][i];
+				}
+				else if (dir.equals("left")) {
+					return grid.tiles[(pos.x + num)/ 100][i];
+				}
+			}
+				
+		}
+		return null;
+	}
+
+	public int jump(int jumpBy) 
+	{
+//		int incr = 10;
+//		int newYLoc = pos.y-jumpBy;
+//		while (pos.y > newYLoc)
+//		{
+//			pos.y -= incr;int
+		return pos.y - jumpBy;
+//		}
+	}
+	
+	public Grid increaseLevel() {
+		if (grid.levelFileExists(level + 1))
+		{
+			level++;
+			grid = new Grid(level);
+			return grid;
+		}
+		return this.grid;
+	}
+	
+	public Grid decreaseLevel() {
+		if (grid.levelFileExists(level - 1))
+		{
+			level--;
+			grid = new Grid(level);
+			return grid;
+		}
+		
+		return this.grid;
+	}
+}
+
+	
